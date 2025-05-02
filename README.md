@@ -42,10 +42,10 @@ Each game in this collection serves as a practical tutorial in:
 ## 📝 Blog Posts
 
 Each game comes with an in-depth article exploring:
-- The game's historical significance
 - Technical implementation details
 - Game design principles
 - Modern adaptations and improvements
+- Snark
 
 ## 🤝 Contributing
 
