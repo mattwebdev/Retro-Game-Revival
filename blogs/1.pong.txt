@@ -1,10 +1,5 @@
 Building Pong in 2025: Because Everything Old is New Again (If You Squint Hard Enough)
-Matthew Heinke
-Matthew Heinke
-Temporal Architect @ Short Fuse Games
 
-
-April 22, 2025
 Welcome to "Retro Revival with PyGame" – a series where we rebuild classic games because apparently everything needs a remake these days. We're starting with Pong, and working our way through the greatest hits of the 1970s and 80s. Why? Because sometimes you need to understand the past to appreciate why modern game engines do all the heavy lifting for you. Each article in this series will take you from "I installed Python" to "I made a thing!" with a healthy dose of snark and actually useful programming concepts along the way. No prior game development experience required, just a willingness to type code and a sense of humor about debugging.
 
 New to Python or need a quick refresher?

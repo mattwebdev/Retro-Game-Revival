@@ -17,15 +17,9 @@ And unlike Pong, you don’t need to fake AI or care about ball physics. It’s 
 Getting Set Up (No Skipping, I See You)
 If you followed along with the Pong article, you’ve already got Python and PyGame ready to go. If not, pause here and scroll back to that section of the first post. TL;DR:
 
-bash
-Copy
-Edit
 pip install pygame
 Then run:
 
-bash
-Copy
-Edit
 python snake.py
 And yes, I said snake.py - because this time, we’re building the whole thing inside one clean, glorious file.
 
@@ -42,9 +36,6 @@ Repeat.
 
 The Snake object tracks its body segments as a list of grid positions. Every time it moves, it adds a new head and pops the tail off - unless it just ate something, in which case the tail stays, and the snake grows longer. Like a growing to-do list.
 
-python
-Copy
-Edit
 new = ((cur[0] + x) % GRID_WIDTH, (cur[1] + y) % GRID_HEIGHT)
 Yes, the % operator means you wrap around the screen. Snake doesn’t hit walls in this version - it transcends them. (You can absolutely tweak this later to enable instant death at the edges if you're feeling nostalgic for that harsh Nokia energy.)
 
@@ -53,9 +44,6 @@ The golden rule of Snake is: don’t turn around. That’s not just good life ad
 
 We prevent that with:
 
-python
-Copy
-Edit
 if len(self.positions) > 1 and new == self.positions[1]:
     self.direction = self.last_direction
 This check stops you from executing a perfect 180 into your own tail. We save your last direction and deny the turn if it’s suicidal. Because sometimes, the best code is the one that protects you from yourself.
@@ -65,9 +53,6 @@ Food is randomly placed on the grid. But here’s the fun twist: we can’t let 
 
 So we do this:
 
-python
-Copy
-Edit
 while self.food.position in self.snake.positions:
     self.food.randomize_position()
 Boom. Fairness restored.
@@ -79,9 +64,6 @@ We're using rectangles for the snake and a circle for the food. Could we have ma
 Bonus touch: Snake eyes.
 Yep, the snake has little beady eyes on the head so you know which way it’s going. Totally unnecessary. 100 percent delightful.
 
-python
-Copy
-Edit
 pygame.draw.circle(screen, WHITE, eye_pos, 2)
 If you don’t think this tiny detail adds charm, you might be a robot. A very functional one, but still.
 
@@ -92,9 +74,6 @@ Flash a "GAME OVER" message
 
 Prompt the player to press SPACE to restart
 
-python
-Copy
-Edit
 font = pygame.font.Font(None, 72)
 game_over_text = font.render("GAME OVER", True, RED)
 Clean. Clear. Cruel.
