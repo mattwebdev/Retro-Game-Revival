@@ -1,0 +1,122 @@
+Last time, we conquered Pong - a so-called “simple” game that turned out to be a masterclass in bouncing logic, AI illusions, and rage-inducing ball physics. Today, we’re moving up the evolutionary ladder: Snake. Yes, that Snake - the one that came pre-installed on a Nokia brick that could survive reentry.
+
+We’re not porting it. We’re not remastering it.
+We’re rebuilding it from scratch with PyGame, and it's going to teach us more about game loops, collision detection, and input handling than any Udemy course ever could.
+
+Why Snake?
+Snake is basically the perfect PyGame project. It’s:
+
+Simple to draw (squares on a grid)
+
+Easy to understand (eat food, don’t die)
+
+Surprisingly tricky to get right (like life)
+
+And unlike Pong, you don’t need to fake AI or care about ball physics. It’s just you vs. yourself - your own growing tail becoming your greatest enemy. Kind of poetic, really.
+
+Getting Set Up (No Skipping, I See You)
+If you followed along with the Pong article, you’ve already got Python and PyGame ready to go. If not, pause here and scroll back to that section of the first post. TL;DR:
+
+bash
+Copy
+Edit
+pip install pygame
+Then run:
+
+bash
+Copy
+Edit
+python snake.py
+And yes, I said snake.py - because this time, we’re building the whole thing inside one clean, glorious file.
+
+The Game Loop: Eat, Move, Repeat
+Here’s the core idea of Snake:
+
+You move.
+
+You maybe eat food.
+
+You maybe die.
+
+Repeat.
+
+The Snake object tracks its body segments as a list of grid positions. Every time it moves, it adds a new head and pops the tail off - unless it just ate something, in which case the tail stays, and the snake grows longer. Like a growing to-do list.
+
+python
+Copy
+Edit
+new = ((cur[0] + x) % GRID_WIDTH, (cur[1] + y) % GRID_HEIGHT)
+Yes, the % operator means you wrap around the screen. Snake doesn’t hit walls in this version - it transcends them. (You can absolutely tweak this later to enable instant death at the edges if you're feeling nostalgic for that harsh Nokia energy.)
+
+Input Handling: The One Rule
+The golden rule of Snake is: don’t turn around. That’s not just good life advice - it’s essential in code. Otherwise, pressing left when you're going right will end the game in a single glorious frame.
+
+We prevent that with:
+
+python
+Copy
+Edit
+if len(self.positions) > 1 and new == self.positions[1]:
+    self.direction = self.last_direction
+This check stops you from executing a perfect 180 into your own tail. We save your last direction and deny the turn if it’s suicidal. Because sometimes, the best code is the one that protects you from yourself.
+
+Food Logic: Eat and Respawn
+Food is randomly placed on the grid. But here’s the fun twist: we can’t let it spawn on top of the snake. That’s just unfair.
+
+So we do this:
+
+python
+Copy
+Edit
+while self.food.position in self.snake.positions:
+    self.food.randomize_position()
+Boom. Fairness restored.
+No one wants to play a game where the universe actively tries to screw them over. That’s what social media is for.
+
+Drawing: Retro Chic
+We're using rectangles for the snake and a circle for the food. Could we have made them sprites? Sure. But do you really want to manage assets when you could be writing code? Didn’t think so.
+
+Bonus touch: Snake eyes.
+Yep, the snake has little beady eyes on the head so you know which way it’s going. Totally unnecessary. 100 percent delightful.
+
+python
+Copy
+Edit
+pygame.draw.circle(screen, WHITE, eye_pos, 2)
+If you don’t think this tiny detail adds charm, you might be a robot. A very functional one, but still.
+
+Game Over: Deal With It
+If you run into yourself, it's game over. But instead of silently quitting like a disgruntled shell script, we do the proper thing:
+
+Flash a "GAME OVER" message
+
+Prompt the player to press SPACE to restart
+
+python
+Copy
+Edit
+font = pygame.font.Font(None, 72)
+game_over_text = font.render("GAME OVER", True, RED)
+Clean. Clear. Cruel.
+
+Lessons from a Hungry Snake
+Building Snake from scratch teaches you a surprising amount:
+
+How to manage a grid-based game world
+
+How to handle user input without letting it break everything
+
+How to gracefully recover from game over
+
+How to not make the food spawn inside your body
+
+But more than that, it teaches restraint. You don’t need a particle system, camera shake, or loot drops to make a compelling game. Sometimes, all it takes is a green line chasing a red dot.
+
+What’s Next?
+We’ve done Pong.
+We’ve done Snake.
+Next up: Breakout. Because you haven’t truly suffered until you’ve written your own collision response system for a bouncing ball and a paddle that insists on reflecting it at impossible angles.
+
+Until then, keep your snakes alive and your grid math clean. And if you find a bug, it's probably in your tail.
+
+Full code for this week’s article: snake.py (link to GitHub or Gist)

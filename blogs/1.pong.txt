@@ -1,0 +1,564 @@
+Building Pong in 2025: Because Everything Old is New Again (If You Squint Hard Enough)
+Matthew Heinke
+Matthew Heinke
+Temporal Architect @ Short Fuse Games
+
+
+April 22, 2025
+Welcome to "Retro Revival with PyGame" – a series where we rebuild classic games because apparently everything needs a remake these days. We're starting with Pong, and working our way through the greatest hits of the 1970s and 80s. Why? Because sometimes you need to understand the past to appreciate why modern game engines do all the heavy lifting for you. Each article in this series will take you from "I installed Python" to "I made a thing!" with a healthy dose of snark and actually useful programming concepts along the way. No prior game development experience required, just a willingness to type code and a sense of humor about debugging.
+
+New to Python or need a quick refresher?
+Don’t worry—building Pong is totally doable even if you’re not a Python pro. If you’re just starting out or it’s been a while since you last saw a def, here are a few solid resources to get you up to speed: 
+
+The Python Tutorial on the official docs is a great place to start; 
+Real Python has fantastic beginner-friendly articles and videos; 
+Automate the Boring Stuff with Python is basically required reading for anyone learning Python with a purpose. 
+
+You don’t need to be a coding wizard to follow along—just know what a variable is, how to write a loop, and that indentation matters a lot. here's an example of python that shows the basics... 
+
+# This is a comment. Python ignores it, just like your cat ignores you.
+
+# Constants are typically in SCREAMING_SNAKE_CASE
+MAX_LIVES = 3  # Because three is a magic number
+
+# Variables use snake_case (yes, Python loves snakes)
+player_score = 0
+is_game_over = False
+
+def calculate_high_score(current_score, bonus_points):
+    """This is a function. It does things and (hopefully) returns stuff."""
+    # If statement: because sometimes we need to make decisions
+    if bonus_points > 100:
+        print("Wow, someone's been practicing!")
+    
+    return current_score + bonus_points
+
+# While loop: keeps going until something happens
+while not is_game_over:
+    # For loop: when you need to do something a specific number of times
+    for life in range(MAX_LIVES):
+        print(f"Life {life + 1} of {MAX_LIVES}")
+        
+        # Another if statement, because why not
+        if player_score > 9000:
+            print("It's over 9000!")
+            is_game_over = True
+            break  # Exit the loop early
+    
+    # If we didn't break early, this will run
+    if not is_game_over:
+        player_score = calculate_high_score(player_score, 50)
+        is_game_over = True  # End the game (and this example)
+
+print(f"Final Score: {player_score}") 
+Now...Pong!?
+Let's talk about Pong. Yes, that Pong. The one from 1972 that your grandparents probably played while disco was still cool. Why? Because sometimes the best way to learn something new is to rebuild something ancient. Plus, it's a perfect excuse to learn PyGame without building yet another platformer.
+
+The Setup (Don't Skip This Part, I Know You Want To)
+First, we need Python. Head over to python.org and grab the latest version. Yes, you could use that ancient Python 2.7 installation that's been lurking on your machine since college, but let's not. 
+
+For Windows users: During installation, CHECK THE "Add Python to PATH" BOX. I know it's tempting to just click "Next" repeatedly like you're accepting a terms of service, but this one checkbox will save you hours of ChatGPT prompting later. (Let's be honest, nobody uses Stack Overflow anymore—why wade through actual human answers when you can have an AI confidently give you the wrong solution first?) 
+
+Now, open up your terminal. If you're on Windows, that's PowerShell (the blue one, not the old command prompt—we're not archaeologists). For everyone else, your regular terminal will do just fine.
+
+Check if Python is installed:
+For Mac
+
+python3 --version
+For Windows (Because Microsoft likes to be different) 
+
+python --version 
+If you see something like "Python 3.x.x", you're golden. If you see "command not found" on Linux/Mac or "is not recognized as an internal or external command" on Windows (ah, Windows error messages, as clear as ever), go back and actually install Python this time.
+
+Next, we need pip. It's Python's package manager, and it comes with Python now because someone finally got tired of explaining how to install it separately. Check if you have it: ```bash 
+
+Mac 
+
+pip3 --version
+Windows
+
+ pip --version 
+Now for the fun part. Install PyGame
+Mac 
+
+pip3 install pygame
+Windows 
+
+pip install pygame 
+If you're on Windows and nothing works, try running PowerShell as Administrator. Because apparently installing a package to make a Pong clone requires elevated privileges. Security!
+
+Still no luck? Here's your debugging flowchart: 1. Google the error message 2. Try the first Stack Overflow answer 3. Try the second Stack Overflow answer that contradicts the first one 4. Consider switching to Linux 5. Remember you need Windows for games 6. Finally find the answer in a Reddit comment from 2019 
+
+pyGame 101: The Bare Minimum
+Before we dive into Pong, let's talk about PyGame basics. Here's the skeleton every PyGame project needs:
+
+import pygame
+pygame.init()
+
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 600
+FPS = 60  # More than the human eye can see, right?
+
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption("Pong: Because Retro is Hip")
+clock = pygame.time.Clock()
+
+running = True
+while running: 
+ 
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False   
+    
+    screen.fill((0, 0, 0))  # Black, like my coffee
+    pygame.display.flip()  # Show the new frame
+    
+    clock.tick(FPS)
+
+pygame.quit()  # Clean up after yourself
+If you can get this running, congratulations! You've got a black window that closes when you hit X. It's not Pong, but it's honest work. 
+
+The "It's Just Two Rectangles" Trap Ask any developer about Pong, and they'll say something like: "Oh, it's just two paddles and a ball. Could code that in my sleep."
+
+Sure. And I could probably build a house—it's just some walls and a roof, right? 
+
+Here's what they're conveniently forgetting: - Physics that actually feel good - AI that doesn't play like a caffeinated squirrel - Edge cases that make you question reality - That moment when the ball clips through a paddle and you question your career choices 
+
+Let's break down how to actually build this "simple" game without losing our sanity. 
+
+Drawing Shapes: PyGame's Greatest Hits
+Before we get to the fancy stuff, let's talk about drawing. PyGame gives us a bunch of primitives to work with:
+
+# The paddle (it's just a rectangle, but don't tell anyone)
+pygame.draw.rect(screen, (255, 255, 255),  # White, like your soul
+                (x, y, width, height))
+
+# The ball (a square because circles are overrated)
+pygame.draw.rect(screen, (255, 255, 255),
+                (ball_x - size/2, ball_y - size/2, size, size))
+
+# The center line (because aesthetics matter)
+for y in range(0, WINDOW_HEIGHT, 20):
+    pygame.draw.rect(screen, (128, 128, 128),
+                    (WINDOW_WIDTH/2 - 5, y, 10, 10))
+The Art of Bouncing (It's Not Just Negating Velocity) 
+Remember high school physics? Neither do I. But here's the thing about ball physics in Pong—if you just flip the velocity, it feels wrong. Dead wrong.
+
+# What everyone tries first
+def bad_bounce(self):
+    self.dx = -self.dx  # Congratulations, you've made sad Pong
+Instead, we need to consider: - Where the ball hits the paddle - How to vary the angle based on impact point - Speed increases that don't turn the ball into a heat-seeking missile
+
+Here's what actually works:
+
+def good_bounce(self, paddle):
+    relative_intersect = (paddle.y + paddle.height/2) - self.y
+    normalized_intersect = relative_intersect / (paddle.height/2)
+    bounce_angle = normalized_intersect * math.pi/3  # 60 degree max
+    
+    speed = min(math.sqrt(self.dx*self.dx + self.dy*self.dy) * 1.1,
+                BALL_MAX_SPEED)
+    
+    self.dx = speed * math.cos(bounce_angle)
+    self.dy = -speed * math.sin(bounce_angle)
+Input Handling: Because Players Need Control 
+PyGame gives us two ways to handle input:
+
+# For one-time actions (like menu selection)
+for event in pygame.event.get():
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_ESCAPE:
+            running = False  # Rage quit with style
+
+# For continuous movement (like paddle control)
+keys = pygame.key.get_pressed()
+if keys[pygame.K_w]:
+    paddle.move_up()
+if keys[pygame.K_s]:
+    paddle.move_down()
+Teaching AI to Play (Without Cheating)
+Here's a dirty secret: making an AI that's fun to play against is harder than making one that's perfect. Perfect is easy: 
+
+def perfect_ai(self, ball):
+    self.y = ball.y - self.height / 2
+Congratulations, you've made impossible Pong 
+
+The trick is making AI that feels human-ish. We want three types of opponents:
+
+Easy: Moves directly to ball with intentional delay 
+Medium: Tries to predict but makes mistakes 
+Hard: Predicts well but has speed limits
+
+The secret sauce? Intentional mistakes:
+
+def medium_ai_move(self, ball):
+    target_y = self.predict_ball_position(ball)
+    if self.error_countdown <= 0:
+        self.prediction_error = random.randint(-50, 50)
+        self.error_countdown = random.randint(30, 60)
+    target_y += self.prediction_error
+The Magic of Game Feel
+You know what separates "meh" Pong from great Pong? It's not the graphics (it's literally rectangles). It's the little things:
+
+A proper countdown before each round:
+
+def draw_countdown(self):
+    elapsed = (pygame.time.get_ticks() - self.countdown_start) / 1000
+    count = max(1, int(COUNTDOWN_TIME - elapsed + 1))
+    text = self.font.render(str(count), True, (255, 255, 255))
+    text_rect = text.get_rect(center=(WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
+    screen.blit(text, text_rect)
+Ball speed that gradually increases but never gets impossible
+Paddle movement that feels responsive but not twitchy
+Clear visual feedback for scoring
+A menu system that doesn't feel like it was designed by a compiler
+
+These aren't features—they're the difference between a game and a tech demo. 
+
+The Real Lessons Here
+Building Pong isn't about recreating a museum piece. It's about learning: 
+
+How to structure a PyGame project properly 
+When perfect AI is actually bad design 
+Why game feel matters more than technical perfection 
+That "simple" is usually anything but 
+
+Next time someone tells you Pong is too basic to be worth building, remember: it's not about what you're building. It's about how well you build it.
+
+And hey, at least we didn't have to implement it in assembly on an oscilloscope. Though I'm sure someone on Reddit will tell me that's the "only real way" to make Pong.
+
+Want the full code? Here it is, ready to copy and paste (even though you should write it out line by line… but hey, I know how this goes).
+
+import pygame
+import random
+import math
+
+pygame.init()
+
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 600
+FPS = 60
+
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GRAY = (128, 128, 128)
+
+PADDLE_WIDTH = 15
+PADDLE_HEIGHT = 90
+PADDLE_SPEED = 5
+BALL_SIZE = 15
+BALL_SPEED = 5
+BALL_MAX_SPEED = 15
+AI_SPEED_EASY = 3
+AI_SPEED_MEDIUM = 4
+AI_SPEED_HARD = 5
+POINTS_TO_WIN = 5
+COUNTDOWN_TIME = 3 
+
+class Paddle:
+    def __init__(self, x, y, is_ai=False, ai_difficulty="medium"):
+        self.x = x
+        self.y = y
+        self.width = PADDLE_WIDTH
+        self.height = PADDLE_HEIGHT
+        self.speed = PADDLE_SPEED
+        self.score = 0
+        self.is_ai = is_ai
+        self.ai_difficulty = ai_difficulty
+        self.prediction_error = 0
+        self.error_countdown = 0
+    
+    def move(self, up=True):
+        if up and self.y > 0:
+            self.y -= self.speed
+        elif not up and self.y < WINDOW_HEIGHT - self.height:
+            self.y += self.speed
+    
+    def ai_move(self, ball):
+        if self.ai_difficulty == "easy":
+            target_y = ball.y - self.height/2
+            speed = AI_SPEED_EASY
+        else:
+            target_y = self.predict_ball_position(ball)
+            if self.ai_difficulty == "medium":
+                if self.error_countdown <= 0:
+                    self.prediction_error = random.randint(-50, 50)
+                    self.error_countdown = random.randint(30, 60)
+                self.error_countdown -= 1
+                target_y += self.prediction_error
+                speed = AI_SPEED_MEDIUM
+            else:
+                speed = AI_SPEED_HARD
+        
+        if abs(self.y + self.height/2 - target_y) > speed:
+            if self.y + self.height/2 > target_y:
+                self.move(True)
+            else:
+                self.move(False)
+    
+    def predict_ball_position(self, ball):
+        if ball.dx <= 0:
+            return WINDOW_HEIGHT/2 - self.height/2
+      
+        time_to_paddle = (self.x - ball.x) / ball.dx
+        
+        future_y = ball.y + ball.dy * time_to_paddle
+        
+        while future_y < 0 or future_y > WINDOW_HEIGHT:
+            if future_y < 0:
+                future_y = -future_y
+            elif future_y > WINDOW_HEIGHT:
+                future_y = 2 * WINDOW_HEIGHT - future_y
+        
+        return future_y - self.height/2
+    
+    def draw(self, screen):
+        pygame.draw.rect(screen, WHITE, 
+                        (self.x, self.y, self.width, self.height))
+
+class Ball:
+    def __init__(self):
+        self.reset()
+        self.size = BALL_SIZE
+    
+    def reset(self):
+        self.x = WINDOW_WIDTH/2
+        self.y = WINDOW_HEIGHT/2
+        angle = random.uniform(-math.pi/4, math.pi/4)
+        if random.random() < 0.5: 
+            angle += math.pi
+        self.dx = BALL_SPEED * math.cos(angle)
+        self.dy = BALL_SPEED * math.sin(angle)
+    
+    def update(self, left_paddle, right_paddle):
+        self.x += self.dx
+        self.y += self.dy
+        
+        if self.y < 0 or self.y > WINDOW_HEIGHT:
+            self.dy = -self.dy
+            self.y = max(0, min(self.y, WINDOW_HEIGHT))
+        
+        if self.x < 0:
+            right_paddle.score += 1
+            self.reset()
+            return
+        elif self.x > WINDOW_WIDTH:
+            left_paddle.score += 1
+            self.reset()
+            return
+        
+        ball_rect = pygame.Rect(self.x - self.size/2, self.y - self.size/2,
+                              self.size, self.size)
+        
+        for paddle in [left_paddle, right_paddle]:
+            paddle_rect = pygame.Rect(paddle.x, paddle.y,
+                                    paddle.width, paddle.height)
+            
+            if ball_rect.colliderect(paddle_rect):
+                relative_intersect_y = (paddle.y + paddle.height/2) - self.y
+                normalized_intersect = relative_intersect_y / (paddle.height/2)
+                bounce_angle = normalized_intersect * math.pi/3 
+                
+                speed = min(math.sqrt(self.dx*self.dx + self.dy*self.dy) * 1.1,
+                          BALL_MAX_SPEED)
+                
+                if paddle == right_paddle:
+                    self.dx = -speed * math.cos(bounce_angle)
+                    self.dy = speed * math.sin(bounce_angle)
+                    self.x = paddle.x - self.size/2 
+                else:
+                    self.dx = speed * math.cos(bounce_angle)
+                    self.dy = speed * math.sin(bounce_angle)
+                    self.x = paddle.x + paddle.width + self.size/2 
+                break
+    
+    def draw(self, screen):
+        pygame.draw.rect(screen, WHITE,
+                        (self.x - self.size/2, self.y - self.size/2,
+                         self.size, self.size))
+
+class Game:
+    def __init__(self):
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        pygame.display.set_caption("Pong")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 36)
+        self.title_font = pygame.font.Font(None, 72)
+        self.countdown_font = pygame.font.Font(None, 150)
+        self.ai_difficulty = "medium" 
+        self.in_menu = True
+        self.in_countdown = False
+        self.countdown_start = 0
+        self.selected_option = 1 
+        self.reset()
+    
+    def reset(self):
+        self.left_paddle = Paddle(50, WINDOW_HEIGHT/2 - PADDLE_HEIGHT/2)
+        self.right_paddle = Paddle(WINDOW_WIDTH - 50 - PADDLE_WIDTH,
+                                 WINDOW_HEIGHT/2 - PADDLE_HEIGHT/2,
+                                 True, self.ai_difficulty)
+        self.ball = Ball()
+        self.game_over = False
+    
+    def start_countdown(self):
+        self.in_countdown = True
+        self.countdown_start = pygame.time.get_ticks()
+        self.reset() 
+    
+    def handle_input(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN:
+                if self.in_menu:
+                    if event.key in [pygame.K_UP, pygame.K_w]:
+                        self.selected_option = (self.selected_option - 1) % 3
+                    elif event.key in [pygame.K_DOWN, pygame.K_s]:
+                        self.selected_option = (self.selected_option + 1) % 3
+                    elif event.key == pygame.K_RETURN:
+                        new_difficulty = ["easy", "medium", "hard"][self.selected_option]
+                        if new_difficulty != self.ai_difficulty:
+                            self.ai_difficulty = new_difficulty
+                            self.right_paddle.ai_difficulty = self.ai_difficulty
+                        self.in_menu = False
+                        self.start_countdown()
+                elif not self.in_countdown:
+                    if event.key == pygame.K_r:
+                        self.reset()
+                    elif event.key == pygame.K_ESCAPE:
+                        self.in_menu = True
+                        self.selected_option = ["easy", "medium", "hard"].index(self.ai_difficulty)
+                    elif event.key == pygame.K_1:
+                        self.ai_difficulty = "easy"
+                        self.right_paddle.ai_difficulty = "easy"
+                        self.start_countdown()
+                    elif event.key == pygame.K_2:
+                        self.ai_difficulty = "medium"
+                        self.right_paddle.ai_difficulty = "medium"
+                        self.start_countdown()
+                    elif event.key == pygame.K_3:
+                        self.ai_difficulty = "hard"
+                        self.right_paddle.ai_difficulty = "hard"
+                        self.start_countdown()
+        
+        if not self.in_menu and not self.in_countdown:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_w]:
+                self.left_paddle.move(True)
+            if keys[pygame.K_s]:
+                self.left_paddle.move(False)
+        
+        return True
+    
+    def draw_menu(self):
+        self.screen.fill(BLACK)
+    
+        title = self.title_font.render("PONG", True, WHITE)
+        title_rect = title.get_rect(center=(WINDOW_WIDTH/2, 100))
+        self.screen.blit(title, title_rect)
+        
+        difficulties = ["Easy", "Medium", "Hard"]
+        for i, diff in enumerate(difficulties):
+            color = WHITE if i == self.selected_option else GRAY
+            text = self.font.render(diff, True, color)
+            rect = text.get_rect(center=(WINDOW_WIDTH/2, 250 + i * 50))
+
+            if i == self.selected_option:
+                pygame.draw.rect(self.screen, WHITE, 
+                               (rect.left - 20, rect.top, 10, rect.height))
+            self.screen.blit(text, rect)
+        
+
+        controls = [
+            "Controls:",
+            "W/S - Move paddle up/down",
+            "1/2/3 - Change AI difficulty",
+            "R - Restart game",
+            "ESC - Return to menu",
+            "",
+            "Press ENTER to start"
+        ]
+        
+        for i, line in enumerate(controls):
+            text = self.font.render(line, True, WHITE)
+            rect = text.get_rect(center=(WINDOW_WIDTH/2, 400 + i * 30))
+            self.screen.blit(text, rect)
+    
+    def draw_countdown(self):
+        self.screen.fill(BLACK)
+        self.left_paddle.draw(self.screen)
+        self.right_paddle.draw(self.screen)
+
+        for y in range(0, WINDOW_HEIGHT, 20):
+            pygame.draw.rect(self.screen, GRAY,
+                           (WINDOW_WIDTH/2 - 5, y, 10, 10))
+        
+        elapsed = (pygame.time.get_ticks() - self.countdown_start) / 1000
+        count = max(1, int(COUNTDOWN_TIME - elapsed + 1))
+        
+        if count <= 3: 
+            text = self.countdown_font.render(str(count), True, WHITE)
+            text_rect = text.get_rect(center=(WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
+            self.screen.blit(text, text_rect)
+    
+    def draw(self):
+        if self.in_menu:
+            self.draw_menu()
+        elif self.in_countdown:
+            self.draw_countdown()
+        else:
+            self.screen.fill(BLACK)
+            for y in range(0, WINDOW_HEIGHT, 20):
+                pygame.draw.rect(self.screen, GRAY,
+                               (WINDOW_WIDTH/2 - 5, y, 10, 10))
+            
+            self.left_paddle.draw(self.screen)
+            self.right_paddle.draw(self.screen)
+            self.ball.draw(self.screen)
+            
+            left_score = self.font.render(str(self.left_paddle.score), True, WHITE)
+            right_score = self.font.render(str(self.right_paddle.score), True, WHITE)
+            self.screen.blit(left_score, (WINDOW_WIDTH/4, 20))
+            self.screen.blit(right_score, (3*WINDOW_WIDTH/4, 20))
+            
+            diff_text = self.font.render(f"AI: {self.ai_difficulty}", True, GRAY)
+            self.screen.blit(diff_text, (10, WINDOW_HEIGHT - 30))
+           
+            if self.game_over:
+                winner = "Player 1" if self.left_paddle.score > self.right_paddle.score else "AI"
+                text = self.font.render(f"{winner} Wins! Press R to restart", True, WHITE)
+                text_rect = text.get_rect(center=(WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
+                self.screen.blit(text, text_rect)
+        
+        pygame.display.flip()
+    
+    def update(self):
+        if self.in_countdown:
+            elapsed = (pygame.time.get_ticks() - self.countdown_start) / 1000
+            if elapsed >= COUNTDOWN_TIME:
+                self.in_countdown = False
+        elif not self.in_menu and not self.game_over:
+            self.ball.update(self.left_paddle, self.right_paddle)
+            self.right_paddle.ai_move(self.ball)
+            
+            if (self.left_paddle.score >= POINTS_TO_WIN or 
+                self.right_paddle.score >= POINTS_TO_WIN):
+                self.game_over = True
+    
+    def run(self):
+        running = True
+        while running:
+            running = self.handle_input()
+            self.update()
+            self.draw()
+            self.clock.tick(FPS)
+
+def main():
+    game = Game()
+    game.run()
+
+if __name__ == "__main__":
+    main()
+
+# find errors in my code? send a note to hello@shortfuse.games 
+Next week: Snake. Because apparently, we're working our way through the "Games Your Phone Had in 2003" catalogue. Stay tuned.
