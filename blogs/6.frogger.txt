@@ -1,0 +1,323 @@
+FROGGER: The Game That Taught Me to Look Both Ways (And Then Look Again)
+Matthew Heinke
+Temporal Architect @ Short Fuse Games
+
+May 13, 2025
+
+We've done Pong. We've done Snake. We've smashed blocks, dodged asteroids, and even survived space battles. Now it's time for Frogger - the original "why did I think this was a good idea" simulator.
+
+If Pong was about timing, Snake was about self-sabotage, Breakout was about angles, Spacewar was about physics, and Asteroids was about chaos, then Frogger is about patience. And timing. And maybe a little bit of luck.
+
+This is part six of our "Retro Revival with PyGame" series. As always, no prior game dev experience required, just Python, a working keyboard, and the ability to stay calm when your frog gets run over for the 47th time.
+
+Why Build Frogger?
+Because it's deceptively simple and surprisingly deep. Frogger teaches:
+
+- Lane-based movement systems
+- Multiple collision types
+- Object pooling and cleanup
+- Score tracking with bonus points
+- The importance of looking both ways
+
+Unlike our previous games, Frogger isn't about reflexes or precision. It's about planning, timing, and accepting that sometimes, the universe just wants to watch a frog get hit by a truck.
+
+The Setup: More Than Just a Road
+First, we need a proper game environment. That means:
+
+- A grid-based world (because frogs don't do diagonal)
+- Multiple lanes of traffic (because one lane of death isn't enough)
+- A river with logs (because water is just traffic with extra steps)
+- Safe zones at the top (because even frogs need a break)
+
+Here's how we structure our game world:
+
+```python
+# Constants
+WINDOW_WIDTH = 600
+WINDOW_HEIGHT = 600
+GRID_SIZE = 40
+FPS = 60
+
+# Game settings
+FROG_SIZE = GRID_SIZE - 4
+CAR_WIDTH = GRID_SIZE * 2
+LOG_WIDTH = GRID_SIZE * 3
+STARTING_LIVES = 3
+```
+
+The Grid: Your New Best Friend
+Frogger lives on a grid. Each move is one grid space. No diagonals. No partial moves. It's like chess, but with more traffic.
+
+```python
+def move(self, dx, dy):
+    new_x = self.x + dx * GRID_SIZE
+    new_y = self.y + dy * GRID_SIZE
+    
+    if 0 <= new_x <= WINDOW_WIDTH and 0 <= new_y <= WINDOW_HEIGHT:
+        self.x = new_x
+        self.y = new_y
+        self.hop_animation = 5  # Start hop animation
+        return True
+    return False
+```
+
+This grid-based movement is crucial. It makes the game fair. It makes it predictable. It makes it possible to actually win.
+
+The Frog: Your Digital Avatar
+The frog is simple. It moves. It dies. It respawns. But making it feel good to control is an art:
+
+```python
+class Frog:
+    def __init__(self):
+        self.reset_position()
+        self.size = FROG_SIZE
+        self.on_log = None
+        self.hop_animation = 0  # For jump animation
+    
+    def reset_position(self):
+        self.x = WINDOW_WIDTH // 2
+        self.y = WINDOW_HEIGHT - GRID_SIZE // 2
+        self.on_log = None
+```
+
+Notice the hop_animation. It's a small detail, but it makes the movement feel alive. The frog doesn't just teleport - it hops. It's the little things that make a game feel good.
+
+The Vehicles: Your Worst Nightmare
+Vehicles are the main obstacle. They move in lanes. They have different speeds. Some are trucks. Some are cars. All of them want to turn your frog into roadkill.
+
+```python
+class Vehicle:
+    def __init__(self, x, y, speed, lane):
+        self.x = x
+        self.y = y
+        self.width = CAR_WIDTH
+        self.height = GRID_SIZE - 8
+        self.speed = speed
+        self.lane = lane
+        self.is_truck = random.random() > 0.7
+        if self.is_truck:
+            self.width = CAR_WIDTH * 1.5
+```
+
+The Logs: Your Floating Friends
+The river is just as deadly as the road, but with logs instead of cars. The logs move, and if you're on one, you move with it. It's like public transportation, but with more splashing.
+
+```python
+class Log:
+    def __init__(self, x, y, speed, lane):
+        self.x = x
+        self.y = y
+        self.width = LOG_WIDTH
+        self.height = GRID_SIZE - 8
+        self.speed = speed
+        self.lane = lane
+```
+
+The Game Loop: Hop, Die, Repeat
+You know the drill:
+
+```python
+while True:
+    game.handle_input()
+    game.update()
+    game.draw()
+    clock.tick(FPS)
+```
+
+But inside that loop? Pure chaos. Cars move. Logs float. Frogs hop. And somewhere, a truck is waiting to ruin your day. 
+
+Collision Detection: The Art of Not Dying
+In Frogger, there are three types of collisions:
+
+1. Vehicle collisions (instant death)
+2. Water collisions (instant death)
+3. Log collisions (you're safe, but you're moving)
+
+Here's how we handle them:
+
+```python
+def check_collisions(self):
+    # Get frog hitbox
+    frog_rect = pygame.Rect(
+        self.frog.x - self.frog.size//2,
+        self.frog.y - self.frog.size//2,
+        self.frog.size,
+        self.frog.size
+    )
+    
+    # Check vehicle collisions
+    for vehicle in self.vehicles:
+        vehicle_rect = pygame.Rect(
+            vehicle.x, vehicle.y - vehicle.height//2,
+            vehicle.width, vehicle.height
+        )
+        if frog_rect.colliderect(vehicle_rect):
+            return False
+    
+    # Check if in river
+    if 2 * GRID_SIZE < self.frog.y < 6 * GRID_SIZE:
+        on_any_log = False
+        for log in self.logs:
+            log_rect = pygame.Rect(
+                log.x, log.y - log.height//2,
+                log.width, log.height
+            )
+            if frog_rect.colliderect(log_rect):
+                self.frog.on_log = log
+                on_any_log = True
+                break
+        if not on_any_log:
+            return False
+```
+
+The key here is the order of checks. We check vehicles first (because they're the most common death), then we check if we're in the river, and finally we check if we're on a log. It's like a flowchart of death.
+
+The River: Nature's Traffic Jam
+The river is special. It's not just water - it's moving water. And in that water are logs. And on those logs? Your only chance of survival.
+
+```python
+def update(self):
+    if self.on_log:
+        self.x += self.on_log.speed
+        if self.x < 0 or self.x > WINDOW_WIDTH:
+            return False
+```
+
+When you're on a log, you move with it. It's like surfing, but with more existential dread. And if the log moves off screen? Well, let's just say the frog doesn't get a second chance.
+
+The Goals: Your Safe Haven
+At the top of the screen are five safe spots. Reach them all, and you win. Sort of. Then you get to do it all over again, but faster.
+
+```python
+# Check if reached top
+if self.frog.y < GRID_SIZE:
+    spot_index = int(self.frog.x // (WINDOW_WIDTH // 5))
+    if 0 <= spot_index < 5 and not self.reached_spots[spot_index]:
+        self.reached_spots[spot_index] = True
+        self.score += 100
+        self.frog.reset_position()
+        # Check if all spots are reached
+        if all(self.reached_spots):
+            self.score += 1000
+            self.reached_spots = [False] * 5
+```
+
+Each spot is worth 100 points. Fill all five? That's a 1000-point bonus. It's like a reward for not dying. Which, in Frogger, is harder than it sounds.
+
+Visual Polish: Making Death Look Good
+Frogger isn't just about gameplay. It's about making that gameplay look good. We've got:
+
+- Hop animations
+- Wave effects in the river
+- Vehicle details (windows, wheels)
+- Log textures
+- Score and lives display
+
+```python
+def draw(self, screen):
+    # Calculate hop offset for animation
+    hop_offset = math.sin(self.hop_animation * math.pi / 5) * 5 if self.hop_animation > 0 else 0
+    
+    # Draw frog body (oval)
+    pygame.draw.ellipse(screen, DARK_GREEN,
+                      (self.x - self.size//2, self.y - self.size//2 - hop_offset,
+                       self.size, self.size))
+    pygame.draw.ellipse(screen, GREEN,
+                      (self.x - self.size//2 + 2, self.y - self.size//2 - hop_offset + 2,
+                       self.size - 4, self.size - 4))
+```
+
+The hop animation is crucial. Without it, the frog would just teleport around. With it? It feels alive. It feels like a frog. It feels like something you don't want to see get hit by a truck. 
+
+The Game Class: Bringing It All Together
+The Game class is where everything happens. It manages the frog, the vehicles, the logs, and the overall game state. It's like a traffic controller, but with more frogs.
+
+```python
+class Game:
+    def __init__(self):
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        pygame.display.set_caption("Frogger")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 36)
+        self.reset()
+    
+    def reset(self):
+        self.frog = Frog()
+        self.lives = STARTING_LIVES
+        self.score = 0
+        self.reached_spots = [False] * 5  # 5 spots to reach at top
+        
+        # Create vehicles in lanes
+        self.vehicles = []
+        vehicle_lanes = range(7, 11)  # 4 lanes of traffic
+        for lane in vehicle_lanes:
+            y = lane * GRID_SIZE
+            speed = (2 + lane % 2) * (1 if lane % 2 == 0 else -1)
+            # Add multiple vehicles per lane
+            for i in range(3):
+                x = (WINDOW_WIDTH // 3) * i
+                self.vehicles.append(Vehicle(x, y, speed, lane))
+        
+        # Create logs in river
+        self.logs = []
+        log_lanes = range(2, 6)  # 4 lanes of river
+        for lane in log_lanes:
+            y = lane * GRID_SIZE
+            speed = (1 + lane % 2) * (1 if lane % 2 == 0 else -1)
+            # Add multiple logs per lane
+            for i in range(2):
+                x = (WINDOW_WIDTH // 2) * i
+                self.logs.append(Log(x, y, speed, lane))
+```
+
+The reset method is particularly important. It sets up the initial game state, creates the vehicles and logs, and prepares for a new game. It's like hitting the reset button on your life, but with more frogs.
+
+What Frogger Taught Me
+Building Frogger taught me several important lessons:
+
+1. Grid-based movement isn't just for Snake
+   - It makes the game fair
+   - It makes it predictable
+   - It makes it possible to actually win
+
+2. Multiple collision types need careful handling
+   - Vehicles kill you
+   - Water kills you
+   - Logs save you (but might kill you later)
+
+3. Visual feedback is crucial
+   - Hop animations make movement feel alive
+   - Wave effects make the river feel dangerous
+   - Vehicle details make the road feel busy
+
+4. Game state management is key
+   - Tracking lives
+   - Tracking score
+   - Tracking reached spots
+   - Managing respawns
+
+5. Sometimes, the best games are the ones that make you look both ways
+
+The Real Challenge
+The hardest part of building Frogger wasn't the code. It was making it feel fair. Making it feel possible. Making it feel like something you could actually win.
+
+Because at its heart, Frogger is about hope. Hope that you can make it across. Hope that the next log will be there. Hope that the truck won't be.
+
+And maybe that's why we keep playing. Because in a world of instant death and moving obstacles, there's something beautiful about a frog trying to get home.
+
+What's Next?
+We've built:
+- Pong (timing and AI)
+- Snake (grid movement)
+- Breakout (collision angles)
+- Spacewar (gravity and multiplayer)
+- Asteroids (momentum and polish)
+- Frogger (lane management and hope)
+
+Next up? Maybe Tetris. Maybe a platformer. Maybe something with more frogs. Whatever it is, we'll keep learning, keep building, and keep looking both ways.
+
+Until then, keep your frogs safe and your logs close.
+
+Code is below. Break it. Modify it. Break it again. That's the whole point. Got feedback, questions, or frog survival tips? Send them to hello@shortfuse.games
+
+[Full code implementation follows...] 

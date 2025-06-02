@@ -1,0 +1,672 @@
+Last time, we were bouncing bricks in Breakout. Before that, we were chasing our tails in Snake. And way back when, we built Pong and pretended our AI wasn't just a glorified if-statement.
+
+Today, we're going orbital, and a little bit longer then my usual article.
+
+We’re building Spacewar! from scratch in PyGame. The 1962 original was multiplayer, physics-heavy, and impossible to play unless you had a university mainframe (lucky for us, we've got Python and a 2020s attention span). Let’s make it dangerous.
+
+Why Spacewar?
+Because it’s the OG of multiplayer games. Two ships. One sun. No rules. Plus:
+
+It teaches real rotational movement (with actual inertia)
+
+It introduces gravity, velocity limits, and friction
+
+You’ll build an AI pilot that occasionally doesn’t crash into the sun
+
+And yes, the sun will kill you
+
+The Multiplayer Milestone
+This is a big moment in our game development journey. After three games of solo play (Pong's AI opponent doesn’t count, and you know it), we’re finally adding real multiplayer support. Yes, it’s local multiplayer, just you and a friend on the same keyboard—but it’s a crucial step in game development.
+
+Think about it:
+
+Pong was you vs. AI
+
+Snake was you vs. yourself
+
+Breakout was you vs. those damned blocks
+
+Now? It’s you vs. another human being
+
+The controls are split between two players:
+
+Player 1 (Green Ship): A/D to rotate, W to thrust, SPACE to fire, H for hyperspace
+
+Player 2 (Red Ship): Arrow keys to rotate/thrust, ENTER to fire, RIGHT SHIFT for hyperspace
+
+And if you don’t have a friend handy? Don’t worry. We’ve built an AI that’s smart enough to be challenging but dumb enough to be beatable. It’s the perfect training partner before you take on a real opponent.
+
+Building on What We've Learned
+Remember how we handled ball physics in Pong? That was just the tip of the iceberg. Spacewar! takes those concepts and cranks them up to 11:
+
+1. From Pong:
+We learned about velocity and direction
+
+We mastered the art of bouncing things off surfaces
+
+We built our first AI opponent
+
+Now we’re adding:
+
+Continuous acceleration instead of constant velocity
+
+Rotational movement on top of linear movement
+
+A more sophisticated AI that has to deal with physics
+
+2. From Snake:
+We learned about collision detection
+
+We mastered the art of wrapping around screen edges
+
+We built a game loop that could handle multiple objects
+
+Now we’re adding:
+
+Circular collision detection for ships and torpedoes
+
+Screen wrapping with momentum (not just position)
+
+Multiple moving objects with different behaviors
+
+3. From Breakout:
+We learned about angle calculations
+
+We mastered the art of multiple collision types
+
+We built a scoring system
+
+Now we’re adding:
+
+Gravity as a continuous force
+
+Multiple collision types (ship-ship, ship-star, torpedo-ship)
+
+A more complex scoring system with instant death
+
+The Game Loop: Fly, Fire, Flee
+We’ve been here before:
+
+while True:
+    game.handle_input()
+    game.update()
+    game.draw()
+    clock.tick(FPS)
+But inside that loop? A showdown between two ships trying to outmaneuver each other using thrust, torque, and torpedoes. Oh, and there’s a sun in the middle. It has gravity. It will kill you.
+
+Ship Movement: Like Driving on Ice. In Space.
+Forget the arrow keys. This is thrust-and-drift. You rotate the ship. You apply thrust. And then? You just keep drifting in that direction until friction decides to slow you down.
+
+Let’s break down the movement system piece by piece:
+
+1. Rotation (The Easy Part):
+def rotate(self, clockwise: bool = True) -> None:
+    self.angle += ROTATION_SPEED * (1 if clockwise else -1)
+This is straightforward: we just add or subtract from our angle. But why use angles? Because in space, we need to know which way we’re pointing to apply thrust in the right direction.
+
+2. Thrust (The Physics Part):
+def thrust(self) -> None:
+    self.thrusting = True
+    self.dx += math.cos(math.radians(self.angle)) * THRUST_POWER
+    self.dy -= math.sin(math.radians(self.angle)) * THRUST_POWER
+Here’s what’s happening:
+
+math.radians(self.angle) converts our angle to radians (because math.cos/sin work in radians)
+
+math.cos gives us the x-component of our direction
+
+math.sin gives us the y-component (negative because in PyGame, y increases downward)
+
+We multiply by THRUST_POWER to control how strong the thrust is
+
+3. Gravity (The Fun Part):
+dx, dy = star_x - self.x, star_y - self.y
+distance = math.sqrt(dx * dx + dy * dy)
+if distance > 0:
+    self.dx += (dx / distance) * GRAVITY
+    self.dy += (dy / distance) * GRAVITY
+This creates a gravitational pull toward the star:
+
+Calculate direction to star (dx, dy)
+
+Normalize it by dividing by distance
+
+Apply gravity force in that direction
+
+4. Velocity Damping (The Control Part):
+self.dx *= VELOCITY_DAMPING
+self.dy *= VELOCITY_DAMPING
+This is our "space friction" - it slowly reduces velocity over time. VELOCITY_DAMPING is 0.98, meaning we lose 2% of our speed each frame. This prevents infinite acceleration while still feeling like space.
+
+5. Speed Limit (The Safety Part):
+current_speed = math.sqrt(self.dx * self.dx + self.dy * self.dy)
+if current_speed > MAX_VELOCITY:
+    self.dx = (self.dx / current_speed) * MAX_VELOCITY
+    self.dy = (self.dy / current_speed) * MAX_VELOCITY
+This keeps ships from going too fast:
+
+Calculate current speed using the Pythagorean theorem
+
+If we're over the limit, scale our velocity down while maintaining direction
+
+Torpedoes: No Spam, Just Physics
+You get four shots. That’s it. Each torpedo needs to:
+
+Start at the right position
+
+Move in the right direction
+
+Inherit the ship's momentum
+
+Die after a while
+
+Here’s how we do it:
+
+@dataclass
+class Torpedo:
+    x: float
+    y: float
+    dx: float
+    dy: float
+    lifetime: int
+
+def fire_torpedo(self) -> None:
+    if len(self.torpedoes) < 4:  # Limit of 4 torpedoes
+        self.torpedoes.append(Torpedo(
+            # Start at ship's position
+            self.x, self.y,
+            # Combine ship's velocity with torpedo's initial velocity
+            self.dx + math.cos(math.radians(self.angle)) * TORPEDO_SPEED,
+            self.dy - math.sin(math.radians(self.angle)) * TORPEDO_SPEED,
+            TORPEDO_LIFETIME  # How long the torpedo lives
+        ))
+Wanna score a hit? You’ll need to lead your target. Think Pong, but with explosions.
+
+The Sun: Now It Actually Works
+In the original, the sun was just a glowing background. Now, it has rules:
+
+If you're within 50 pixels? You'll flash yellow. This is your warning. 
+
+If you're within 25 pixels? You die. Instantly. No second chances.
+
+if distance < STAR_KILL_RADIUS:
+    self.dead = True
+    return
+And yes, your opponent scores the point. Even if they didn’t fire a single shot. Solar kills count, folks.
+
+AI: It Knows Just Enough to Be Dangerous
+The AI tracks your position, predicts your angle, and decides whether to thrust or fire. Building on our Pong AI but making it more sophisticated:
+
+self.ai_target_angle = target_angle + random.uniform(-30 * (1 - accuracy), 30 * (1 - accuracy))
+self.ai_thrusting = distance > 100 and random.random() < accuracy
+self.ai_firing = abs((self.angle - self.ai_target_angle) % 360) < 20
+On easy, it’s a drunk intern. On hard, it’s a missile with an ego.
+
+Game Over: Victory or Vaporization
+When a ship dies—whether by torpedo or by sun—the game ends.
+
+And if you die to the sun? You get a custom STAR DESTRUCTION screen. Because we’re classy like that.
+
+Replays are instant. Just hit SPACE. Or ESC to sob quietly in the menu.
+
+Lessons from a Dying Star
+By the time you finish Spacewar!, you’ll have learned:
+
+How to apply thrust and inertia (without a fancy physics engine)
+
+How to build reactive AI that doesn’t cheat (much)
+
+How to implement gravity as a directional force
+
+How to make projectiles feel good with minimal logic
+
+And how to structure a PyGame project with menus, countdowns, and game states
+
+It’s a masterclass in a lot with a little.
+
+No fancy assets. No frameworks. Just vectors, loops, and a sun that really wants you dead.
+
+What’s Next?
+We’ve built Pong (simple physics). We’ve built Snake (grid-based movement). We’ve built Breakout (complex collisions). Now we’ve built Spacewar! (full physics simulation).
+
+Whatever comes next, the process is the same. Start small. Learn something. Break things. Then fix them better.
+
+Until then, keep your thrusters firing and your hyperspace ready. You never know when you’ll need to make a quick escape.
+
+Code is below; Read it. Modify it. Break it. You’ll learn more that way than any tutorial can teach you.
+import pygame
+import math
+import random
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Optional
+
+pygame.init()
+
+# Constants
+WINDOW_WIDTH, WINDOW_HEIGHT = 800, 600
+FPS = 60
+BLACK, WHITE, YELLOW, RED, GREEN = (0, 0, 0), (255, 255, 255), (255, 255, 0), (255, 0, 0), (0, 255, 0)
+
+# Game settings
+SHIP_SPEED, ROTATION_SPEED, THRUST_POWER = 0.5, 3, 0.1
+GRAVITY, TORPEDO_SPEED = 0.01, 5
+TORPEDO_LIFETIME, HYPESPACE_COOLDOWN = 60, 180
+VELOCITY_DAMPING, MAX_VELOCITY = 0.98, 5
+SHIP_RADIUS, TORPEDO_RADIUS = 15, 3
+HIT_FLASH_DURATION, POINTS_TO_WIN, COUNTDOWN_TIME = 10, 5, 3
+STAR_RADIUS = 10
+STAR_DANGER_RADIUS = 50  # Distance at which ships start getting warning
+STAR_KILL_RADIUS = 25    # Distance at which ships are destroyed
+
+AI_DIFFICULTY = {
+    'easy': {'reaction_time': 30, 'accuracy': 0.7},
+    'medium': {'reaction_time': 20, 'accuracy': 0.85},
+    'hard': {'reaction_time': 10, 'accuracy': 0.95}
+}
+
+@dataclass
+class Controls:
+    rotate_left: int
+    rotate_right: int
+    thrust: int
+    fire: int
+    hyperspace: int
+
+@dataclass
+class Torpedo:
+    x: float
+    y: float
+    dx: float
+    dy: float
+    lifetime: int
+
+class Ship:
+    def __init__(self, x: float, y: float, color: Tuple[int, int, int], 
+                 controls: Controls, is_ai: bool = False, ai_difficulty: str = 'medium'):
+        self.x, self.y = x, y
+        self.dx = self.dy = 0
+        self.angle = 0
+        self.color, self.controls = color, controls
+        self.score = 0
+        self.hyperspace_cooldown = 0
+        self.torpedoes: List[Torpedo] = []
+        self.thrusting = False
+        self.is_ai = is_ai
+        self.ai_difficulty = ai_difficulty
+        self.ai_decision_timer = 0
+        self.ai_target_angle = 0
+        self.ai_thrusting = False
+        self.ai_firing = False
+        self.hit_flash = 0
+        self.star_warning = 0  # Counter for star warning flash
+        self.dead = False      # Flag for ship destruction
+
+    def rotate(self, clockwise: bool = True) -> None:
+        self.angle += ROTATION_SPEED * (1 if clockwise else -1)
+
+    def thrust(self) -> None:
+        self.thrusting = True
+        self.dx += math.cos(math.radians(self.angle)) * THRUST_POWER
+        self.dy -= math.sin(math.radians(self.angle)) * THRUST_POWER
+
+    def fire_torpedo(self) -> None:
+        if len(self.torpedoes) < 4:
+            self.torpedoes.append(Torpedo(
+                self.x, self.y,
+                self.dx + math.cos(math.radians(self.angle)) * TORPEDO_SPEED,
+                self.dy - math.sin(math.radians(self.angle)) * TORPEDO_SPEED,
+                TORPEDO_LIFETIME
+            ))
+
+    def hyperspace(self) -> None:
+        if self.hyperspace_cooldown <= 0:
+            self.x = random.randint(50, WINDOW_WIDTH - 50)
+            self.y = random.randint(50, WINDOW_HEIGHT - 50)
+            self.dx = self.dy = 0
+            self.hyperspace_cooldown = HYPESPACE_COOLDOWN
+
+    def ai_update(self, player_ship: 'Ship', star_x: float, star_y: float) -> None:
+        if self.ai_decision_timer <= 0:
+            dx, dy = player_ship.x - self.x, player_ship.y - self.y
+            target_angle = math.degrees(math.atan2(-dy, dx))
+            accuracy = AI_DIFFICULTY[self.ai_difficulty]['accuracy']
+            
+            self.ai_target_angle = target_angle + random.uniform(-30 * (1 - accuracy), 30 * (1 - accuracy))
+            distance = math.sqrt(dx * dx + dy * dy)
+            self.ai_thrusting = distance > 100 and random.random() < accuracy
+            self.ai_firing = abs((self.angle - self.ai_target_angle) % 360) < 20 and distance < 300 and random.random() < accuracy
+            
+            if self.hyperspace_cooldown <= 0:
+                star_dx, star_dy = star_x - self.x, star_y - self.y
+                if math.sqrt(star_dx * star_dx + star_dy * star_dy) < 50 and random.random() < accuracy:
+                    self.hyperspace()
+            
+            self.ai_decision_timer = AI_DIFFICULTY[self.ai_difficulty]['reaction_time']
+        else:
+            self.ai_decision_timer -= 1
+        
+        if self.ai_thrusting: self.thrust()
+        if self.ai_firing: self.fire_torpedo()
+        
+        angle_diff = (self.ai_target_angle - self.angle) % 360
+        self.rotate(angle_diff <= 180)
+
+    def update(self, star_x: float, star_y: float, player_ship: Optional['Ship'] = None) -> None:
+        if self.dead:
+            return
+
+        if self.is_ai and player_ship:
+            self.ai_update(player_ship, star_x, star_y)
+        
+        dx, dy = star_x - self.x, star_y - self.y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        # Check for star collision
+        if distance < STAR_KILL_RADIUS:
+            self.dead = True
+            return
+        
+        # Update star warning
+        self.star_warning = max(0, self.star_warning - 1)
+        if distance < STAR_DANGER_RADIUS:
+            self.star_warning = 5  # Keep warning visible for 5 frames
+        
+        if distance > 0:
+            self.dx += (dx / distance) * GRAVITY
+            self.dy += (dy / distance) * GRAVITY
+        
+        self.dx *= VELOCITY_DAMPING
+        self.dy *= VELOCITY_DAMPING
+        
+        current_speed = math.sqrt(self.dx * self.dx + self.dy * self.dy)
+        if current_speed > MAX_VELOCITY:
+            self.dx = (self.dx / current_speed) * MAX_VELOCITY
+            self.dy = (self.dy / current_speed) * MAX_VELOCITY
+        
+        self.x = (self.x + self.dx) % WINDOW_WIDTH
+        self.y = (self.y + self.dy) % WINDOW_HEIGHT
+        
+        self.torpedoes = [t for t in self.torpedoes if t.lifetime > 0]
+        for t in self.torpedoes:
+            t.x = (t.x + t.dx) % WINDOW_WIDTH
+            t.y = (t.y + t.dy) % WINDOW_HEIGHT
+            t.lifetime -= 1
+        
+        if self.hyperspace_cooldown > 0:
+            self.hyperspace_cooldown -= 1
+        if self.hit_flash > 0:
+            self.hit_flash -= 1
+
+    def draw(self, screen: pygame.Surface) -> None:
+        if self.dead:
+            return
+
+        # Draw star warning if active
+        if self.star_warning > 0:
+            pygame.draw.circle(screen, YELLOW, (int(self.x), int(self.y)), SHIP_RADIUS + 5, 2)
+        
+        points = [
+            (self.x + math.cos(math.radians(self.angle)) * 20,
+             self.y - math.sin(math.radians(self.angle)) * 20),
+            (self.x + math.cos(math.radians(self.angle + 150)) * 10,
+             self.y - math.sin(math.radians(self.angle + 150)) * 10),
+            (self.x + math.cos(math.radians(self.angle - 150)) * 10,
+             self.y - math.sin(math.radians(self.angle - 150)) * 10)
+        ]
+        pygame.draw.polygon(screen, self.color, points)
+        
+        if self.thrusting:
+            thrust_points = [
+                (self.x + math.cos(math.radians(self.angle + 150)) * 10,
+                 self.y - math.sin(math.radians(self.angle + 150)) * 10),
+                (self.x + math.cos(math.radians(self.angle)) * -10,
+                 self.y - math.sin(math.radians(self.angle)) * -10),
+                (self.x + math.cos(math.radians(self.angle - 150)) * 10,
+                 self.y - math.sin(math.radians(self.angle - 150)) * 10)
+            ]
+            pygame.draw.polygon(screen, YELLOW, thrust_points)
+            self.thrusting = False
+        
+        for t in self.torpedoes:
+            pygame.draw.circle(screen, self.color, (int(t.x), int(t.y)), TORPEDO_RADIUS)
+
+class Game:
+    def __init__(self):
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        pygame.display.set_caption("Space War")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 36)
+        self.title_font = pygame.font.Font(None, 72)
+        self.countdown_font = pygame.font.Font(None, 150)
+        
+        self.in_menu = True
+        self.game_mode = None
+        self.ai_difficulty = 'medium'
+        self.selected_option = 0
+        self.game_over = False
+        self.winner = None
+        self.in_countdown = False
+        self.countdown_start = 0
+        
+        self.reset_game()
+
+    def reset_game(self) -> None:
+        self.ship1 = Ship(WINDOW_WIDTH//4, WINDOW_HEIGHT//2, GREEN,
+                         Controls(pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_SPACE, pygame.K_h))
+        
+        self.ship2 = Ship(3*WINDOW_WIDTH//4, WINDOW_HEIGHT//2, RED,
+                         Controls(pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_RETURN, pygame.K_RSHIFT),
+                         is_ai=(self.game_mode == '1player'),
+                         ai_difficulty=self.ai_difficulty)
+        
+        self.star_x, self.star_y = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        self.game_over = False
+        self.winner = None
+        self.ship1.dead = False
+        self.ship2.dead = False
+
+    def start_countdown(self) -> None:
+        self.in_countdown = True
+        self.countdown_start = pygame.time.get_ticks()
+        self.reset_game()
+
+    def draw_menu(self) -> None:
+        self.screen.fill(BLACK)
+        title = self.title_font.render("SPACE WAR", True, WHITE)
+        self.screen.blit(title, title.get_rect(center=(WINDOW_WIDTH//2, 100)))
+        
+        options = ["1 Player", "2 Players", f"AI Difficulty: {self.ai_difficulty.capitalize()}", "Start Game"]
+        for i, option in enumerate(options):
+            color = GREEN if i == self.selected_option else WHITE
+            text = self.font.render(option, True, color)
+            self.screen.blit(text, text.get_rect(center=(WINDOW_WIDTH//2, 250 + i * 50)))
+        
+        pygame.display.flip()
+
+    def draw_countdown(self) -> None:
+        self.screen.fill(BLACK)
+        self.ship1.draw(self.screen)
+        self.ship2.draw(self.screen)
+        pygame.draw.circle(self.screen, YELLOW, (self.star_x, self.star_y), 10)
+        
+        elapsed = (pygame.time.get_ticks() - self.countdown_start) / 1000
+        countdown_number = max(1, COUNTDOWN_TIME - int(elapsed))
+        
+        text = self.countdown_font.render(str(countdown_number) if countdown_number > 0 else "GO!", 
+                                        True, GREEN if countdown_number == 0 else WHITE)
+        self.screen.blit(text, text.get_rect(center=(WINDOW_WIDTH//2, WINDOW_HEIGHT//2)))
+        pygame.display.flip()
+
+    def draw_victory_screen(self) -> None:
+        self.screen.fill(BLACK)
+        
+        # Draw title with different message for star death
+        if self.winner:
+            if any(ship.dead for ship in [self.ship1, self.ship2]):
+                title = self.title_font.render("STAR DESTRUCTION!", True, YELLOW)
+            else:
+                title = self.title_font.render("VICTORY!", True, self.winner.color)
+        else:
+            title = self.title_font.render("GAME OVER", True, WHITE)
+        self.screen.blit(title, title.get_rect(center=(WINDOW_WIDTH//2, 200)))
+        
+        # Draw score
+        score_text = self.font.render(f"Final Score - Green: {self.ship1.score}  Red: {self.ship2.score}", True, WHITE)
+        self.screen.blit(score_text, score_text.get_rect(center=(WINDOW_WIDTH//2, 300)))
+        
+        # Draw instructions
+        instructions = self.font.render("Press SPACE to play again or ESC for menu", True, WHITE)
+        self.screen.blit(instructions, instructions.get_rect(center=(WINDOW_WIDTH//2, 400)))
+        pygame.display.flip()
+
+    def draw(self) -> None:
+        self.screen.fill(BLACK)
+        
+        # Draw star with danger zone
+        pygame.draw.circle(self.screen, YELLOW, (self.star_x, self.star_y), STAR_RADIUS)
+        pygame.draw.circle(self.screen, (255, 165, 0), (self.star_x, self.star_y), STAR_DANGER_RADIUS, 1)
+        
+        # Draw ships
+        self.ship1.draw(self.screen)
+        self.ship2.draw(self.screen)
+        
+        # Draw scores
+        score1 = self.font.render(f"Green: {self.ship1.score}", True, GREEN)
+        score2 = self.font.render(f"Red: {self.ship2.score}", True, RED)
+        self.screen.blit(score1, (10, 10))
+        self.screen.blit(score2, (WINDOW_WIDTH - 100, 10))
+        
+        # Draw win condition
+        win_text = self.font.render(f"First to {POINTS_TO_WIN} wins!", True, WHITE)
+        self.screen.blit(win_text, win_text.get_rect(center=(WINDOW_WIDTH//2, 30)))
+        
+        pygame.display.flip()
+
+    def handle_menu_input(self) -> bool:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    self.selected_option = (self.selected_option - 1) % 4
+                elif event.key == pygame.K_DOWN:
+                    self.selected_option = (self.selected_option + 1) % 4
+                elif event.key == pygame.K_RETURN:
+                    if self.selected_option == 0:
+                        self.game_mode = '1player'
+                        self.in_menu = False
+                        self.start_countdown()
+                    elif self.selected_option == 1:
+                        self.game_mode = '2player'
+                        self.in_menu = False
+                        self.start_countdown()
+                    elif self.selected_option == 2:
+                        difficulties = ['easy', 'medium', 'hard']
+                        self.ai_difficulty = difficulties[(difficulties.index(self.ai_difficulty) + 1) % 3]
+                    elif self.selected_option == 3 and self.game_mode:
+                        self.in_menu = False
+                        self.start_countdown()
+        return True
+
+    def handle_victory_input(self) -> bool:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    self.start_countdown()
+                    return True
+                elif event.key == pygame.K_ESCAPE:
+                    self.in_menu = True
+                    return True
+        return True
+
+    def handle_game_input(self) -> bool:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.in_menu = True
+                return True
+        
+        keys = pygame.key.get_pressed()
+        for ship in [self.ship1, self.ship2]:
+            if not ship.is_ai:
+                if keys[ship.controls.rotate_left]: ship.rotate(False)
+                if keys[ship.controls.rotate_right]: ship.rotate(True)
+                if keys[ship.controls.thrust]: ship.thrust()
+                if keys[ship.controls.hyperspace]: ship.hyperspace()
+                if pygame.key.get_pressed()[ship.controls.fire]: ship.fire_torpedo()
+        
+        return True
+
+    def check_collisions(self) -> None:
+        # Check star collisions first
+        for ship in [self.ship1, self.ship2]:
+            if not ship.dead:
+                dx, dy = self.star_x - ship.x, self.star_y - ship.y
+                if math.sqrt(dx*dx + dy*dy) < STAR_KILL_RADIUS:
+                    ship.dead = True
+                    # Game over when ship is destroyed by star
+                    self.game_over = True
+                    self.winner = self.ship2 if ship == self.ship1 else self.ship1
+                    return
+
+        # Check torpedo hits
+        for ship in [self.ship1, self.ship2]:
+            if ship.dead:
+                continue
+            for torpedo in ship.torpedoes[:]:
+                other_ship = self.ship2 if ship == self.ship1 else self.ship1
+                if other_ship.dead:
+                    continue
+                dx, dy = torpedo.x - other_ship.x, torpedo.y - other_ship.y
+                if math.sqrt(dx*dx + dy*dy) < (SHIP_RADIUS + TORPEDO_RADIUS):
+                    ship.score += 1
+                    ship.torpedoes.remove(torpedo)
+                    other_ship.hit_flash = HIT_FLASH_DURATION
+                    self.check_win_condition()  # Check if this hit won the game
+                    break
+
+    def check_win_condition(self) -> None:
+        if self.ship1.score >= POINTS_TO_WIN:
+            self.game_over = True
+            self.winner = self.ship1
+        elif self.ship2.score >= POINTS_TO_WIN:
+            self.game_over = True
+            self.winner = self.ship2
+        # Star destruction is handled in check_collisions
+
+    def update(self) -> None:
+        self.ship1.update(self.star_x, self.star_y)
+        self.ship2.update(self.star_x, self.star_y, self.ship1)
+        self.check_collisions()
+
+    def run(self) -> None:
+        running = True
+        while running:
+            if self.in_menu:
+                running = self.handle_menu_input()
+                self.draw_menu()
+            elif self.in_countdown:
+                elapsed = (pygame.time.get_ticks() - self.countdown_start) / 1000
+                if elapsed >= COUNTDOWN_TIME + 1:
+                    self.in_countdown = False
+                self.draw_countdown()
+            elif self.game_over:
+                running = self.handle_victory_input()
+                self.draw_victory_screen()
+            else:
+                running = self.handle_game_input()
+                self.update()
+                self.draw()
+            self.clock.tick(FPS)
+
+def main():
+    game = Game()
+    game.run()
+    pygame.quit()
+
+if __name__ == "__main__":
+    main() 
+should I host a server and add remote play to this? message me. 

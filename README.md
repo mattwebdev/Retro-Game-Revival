@@ -4,15 +4,14 @@ Welcome to a collection of lovingly recreated classic arcade games, each built f
 
 ## 🕹️ Featured Games
 
-- **Joust** - The classic medieval aerial combat game where knights joust on flying ostriches
-- **Pong** - The game that started it all, recreated with modern physics
+- **Pong** - The game that started it all, recreated with modern physics and AI
 - **Snake** - The timeless mobile game that defined a generation
+- **Breakout** - Smash your way through colorful blocks with perfect angles
+- **Spacewar!** - The original 2-player space combat game that started it all (1962)
 - **Asteroids** - Blast through space in this vector graphics masterpiece
 - **Frogger** - Navigate through traffic and rivers in this arcade classic
-- **Breakout** - Smash your way through colorful blocks
-- **Space Shooter** - Defend Earth from alien invaders
-- **Cave Runner** - Dodge obstacles in this fast-paced adventure
-- **Maze Runner** - Navigate through challenging labyrinths
+- **Tetris** - Coming soon! The ultimate block-stacking challenge
+- **Platformer** - Coming soon! Jump, run, and collect your way to victory
 
 ## 📚 Educational Value
 
@@ -45,7 +44,15 @@ Each game comes with an in-depth article exploring:
 - Technical implementation details
 - Game design principles
 - Modern adaptations and improvements
-- Snark
+- A healthy dose of snark and humor
+
+Current blog posts:
+1. **Pong** - Timing, AI, and the art of the perfect serve
+2. **Snake** - Grid movement, self-sabotage, and growing pains
+3. **Breakout** - Angles, collisions, and the joy of destruction
+4. **Spacewar!** - Physics, gravity, and the original space battle
+5. **Asteroids** - Momentum, polish, and the beauty of vector graphics
+6. **Frogger** - Lane management, hope, and looking both ways
 
 ## 🤝 Contributing
 
